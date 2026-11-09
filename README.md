@@ -6,8 +6,11 @@ and writes an audit report. No stage ever loads a whole file into memory
 
 ## Setup
 
+Python 3.10 to 3.13. `requirements.txt` is a `pip freeze` of a Python 3.10 venv;
+its pinned numpy/contourpy have no wheels for 3.14.
+
 ```bash
-python -m venv .venv
+python3.10 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 ```

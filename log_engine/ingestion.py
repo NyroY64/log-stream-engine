@@ -4,6 +4,7 @@ import json
 import re
 from collections.abc import Iterator
 from datetime import datetime
+from functools import partial
 from pathlib import Path
 
 # Line formats (see data/auth.log):
@@ -15,19 +16,20 @@ from pathlib import Path
 EVENT_RE = re.compile(
     r"(?P<ts>\S+)\s+(?P<level>\w+)\s+(?P<ip>\S+)"
     r"(?:\s+user=(?P<user>\S+))?"
-    r"(?:\s+code=(?P<code>\d+))?"
-    r"(?:\s+port=(?P<port>\d+)/(?P<proto>\w+))?"
+    r"(?:\s+code=(?P<code>[0-9]{1,5}))?"
+    r"(?:\s+port=(?P<port>[0-9]{1,5})/(?P<proto>\w+))?"
     r"(?:\s+(?P<payload>.*))?"
 )
 RAW_RE = re.compile(r"[\w.\-\[\]]+: .+")
+MAX_LINE = 1 << 20  # 1 MiB: a file without newlines must not load whole
 
 Parsed = dict | tuple | str | None
 
 
 def read_lines(path: str | Path) -> Iterator[str]:
-    """Yield the lines of one file, one at a time."""
+    """Yield the lines of one file, one at a time, each at most MAX_LINE chars."""
     with open(path, encoding="utf-8", errors="replace") as f:
-        for line in f:
+        for line in iter(partial(f.readline, MAX_LINE), ""):
             yield line.rstrip("\n")
 
 
@@ -54,8 +56,13 @@ def parse_payload(text: str | None) -> dict | str | None:
         return None
     try:
         return json.loads(text)
-    except json.JSONDecodeError:
+    except (json.JSONDecodeError, RecursionError):  # deep nesting overflows the parser
         return text
+
+
+def is_port(text: str) -> bool:
+    """ASCII digits only (no "²²"), at most 5, within 0-65535."""
+    return text.isascii() and text.isdigit() and len(text) <= 5 and int(text) <= 65535
 
 
 def parse_line(line: str) -> Parsed:
@@ -65,7 +72,7 @@ def parse_line(line: str) -> Parsed:
         payload = parse_payload(line)
         return payload if isinstance(payload, dict) else None
     match line.split():
-        case ["CONN", ip, port, proto] if port.isdigit():
+        case ["CONN", ip, port, proto] if is_port(port):
             return (ip, int(port), proto.upper())
     if (m := EVENT_RE.fullmatch(line)) and (ts := parse_timestamp(m["ts"])):
         port_num = int(m["port"]) if m["port"] else None

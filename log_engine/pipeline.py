@@ -64,8 +64,16 @@ def normalise(record: dict) -> dict:
         ts = datetime.fromisoformat(ts.replace("Z", "+00:00"))
     when = ts.strftime("%H:%M:%S") if ts else "--:--:--"
     ip_text, code = ip or "-", record["code"] or ""
+    meta = record["meta"]
+    # JSON lines bring their own meta: freeze it and escape its text
+    meta = (
+        tuple(printable(x) if isinstance(x, str) else x for x in meta)
+        if isinstance(meta, (list, tuple))
+        else None
+    )
     return {
         **record,
+        "meta": meta,
         "timestamp": ts,
         "level": level,
         "user_id": user,

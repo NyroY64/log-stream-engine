@@ -1,5 +1,7 @@
 """Acceptance tests for issue #2 (Module 2: pipeline)."""
 
+import json
+
 from log_engine.ingestion import parse_line
 from log_engine.pipeline import is_ip, normalise, route
 from main import main
@@ -38,3 +40,21 @@ def test_is_ip_is_cached():
     is_ip("10.0.0.1")
     is_ip("10.0.0.1")
     assert is_ip.cache_info().hits == 1
+
+
+def test_json_meta_becomes_a_safe_tuple(tmp_path, capsys):
+    line = json.dumps(
+        {
+            "level": "INFO",
+            "src_ip": "1.2.3.4",
+            "meta": ["\x1b]0;x\x07", 4444, "tcp"],
+        }
+    )
+    record = normalise(route(parse_line(line)))
+    assert isinstance(record["meta"], tuple)
+    assert all(map(str.isprintable, record["meta"][::2]))
+    log = tmp_path / "meta.log"
+    log.write_text(line + "\n", encoding="utf-8")
+    assert main([str(log), "--live", "--audit", str(tmp_path / "a.json")]) == 0
+    out = capsys.readouterr().out
+    assert "suspicious_port" in out and "\x1b" not in out and "\x07" not in out

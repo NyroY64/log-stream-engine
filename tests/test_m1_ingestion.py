@@ -52,3 +52,17 @@ def test_a_hostile_file_runs_to_the_end(tmp_path):
     ]
     log.write_text("\n".join(lines) + "\n", encoding="utf-8")
     assert main([str(log), "--audit", str(tmp_path / "audit.json")]) == 0
+
+
+def test_a_5000_digit_json_number_is_rejected_not_a_crash():
+    assert parse_line('{"level": "INFO", "code": ' + "9" * 5000 + "}") is None
+    assert parse_line(f"{TS} INFO 10.0.0.9 [{'9' * 5000}]")["payload"] == f"[{'9' * 5000}]"
+
+
+def test_an_unwritable_audit_path_is_a_clean_error(tmp_path, capsys):
+    log = tmp_path / "a.log"
+    log.write_text(f"{TS} INFO 10.0.0.9\n")
+    blocker = tmp_path / "file"
+    blocker.write_text("")
+    assert main([str(log), "--audit", str(blocker / "audit.json")]) == 1
+    assert capsys.readouterr().err.startswith("error:")

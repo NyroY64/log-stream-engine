@@ -56,7 +56,8 @@ def parse_payload(text: str | None) -> dict | str | None:
         return None
     try:
         return json.loads(text)
-    except (json.JSONDecodeError, RecursionError):  # deep nesting overflows the parser
+    # ValueError covers bad JSON and numbers over 4300 digits; deep nesting overflows the parser
+    except (ValueError, RecursionError):
         return text
 
 

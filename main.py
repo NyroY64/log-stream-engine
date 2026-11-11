@@ -98,7 +98,12 @@ def main(argv: list[str] | None = None) -> int:
     if args.trace_memory:
         _, peak = tracemalloc.get_traced_memory()
         print(f"[MEMORY] peak {peak / 1024:.0f} KiB")
-    print(f"[AUDIT]  written to {export_audit(globals(), locals(), args.audit)}")
+    try:
+        audit_path = export_audit(globals(), locals(), args.audit)
+    except OSError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+    print(f"[AUDIT]  written to {audit_path}")
     return 0
 
 

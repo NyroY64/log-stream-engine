@@ -49,3 +49,12 @@ kernel: eth0 link up
 ```
 
 Code 401 or 403 is a failed login and code 200 is a successful one. Other lines are rejected and counted.
+
+## Team
+
+| Member | GitHub | Work |
+|---|---|---|
+| Youcef Meradi | [@NyroY64](https://github.com/NyroY64) | project setup, M1 ingestion, `main.py` |
+| Hivda Armagan | [@ARM-Hivda](https://github.com/ARM-Hivda) | M2 pipeline, unit tests |
+| asma-abc | [@asma-abc](https://github.com/asma-abc) | M3 aggregation, report notebook |
+| khadijaferouat | [@khadijaferouat](https://github.com/khadijaferouat) | M4 rule engine, log simulator |

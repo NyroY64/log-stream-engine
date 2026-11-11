@@ -3,3 +3,4 @@ __pycache__/
 .pytest_cache/
 reports/
 .ipynb_checkpoints/
+data/live.log

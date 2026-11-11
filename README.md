@@ -24,6 +24,21 @@ python -m log_engine.simulator data/new.log --lines 50000   # write more test da
 python -m pytest -q
 ```
 
+### Live demo
+
+Two terminals. The first writes simulated logs as they happen, the second
+analyses them as they arrive and prints each line (`[LOG]`), rule finding
+(`[FIND]`), brute-force alert (`[ALERT]`) and a progress line (`[LIVE]`).
+Ctrl+C stops the engine and prints the final report.
+
+```bash
+python -m log_engine.simulator data/live.log --lines 100000 --rate 20   # terminal 1
+python main.py data/live.log --follow                                   # terminal 2
+```
+
+One terminal: `python main.py --simulate 5000 --rate 20` (generation and
+analysis in the same window). `--live` shows events without slowing a normal run.
+
 Options: `--threshold N` (failed logins in a row that raise a brute-force alert, default 5),
 `--audit PATH` (default `reports/audit_report.json`).
 

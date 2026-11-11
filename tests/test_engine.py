@@ -5,7 +5,12 @@ from collections import defaultdict
 from log_engine.aggregation import Stats, blacklist_report, detect_brute_force
 from log_engine.ingestion import parse_line, read_sources
 from log_engine.pipeline import build_pipeline, route
-from log_engine.rules import apply_security_rules, audit_scope, blacklisted_ip, critical_level
+from log_engine.rules import (
+    apply_security_rules,
+    audit_scope,
+    blacklisted_ip,
+    critical_level,
+)
 
 EVENT = (
     "2026-11-04T10:15:32Z error 192.168.1.10 user=Alice code=401 port=22/TCP"
@@ -48,7 +53,14 @@ def test_route_and_pipeline_normalise_and_reject():
 
 
 def rec(ip, kind, level="ERROR"):
-    return {"src_ip": ip, "kind": kind, "level": level, "user_id": None, "meta": None, "line": ""}
+    return {
+        "src_ip": ip,
+        "kind": kind,
+        "level": level,
+        "user_id": None,
+        "meta": None,
+        "line": "",
+    }
 
 
 def test_brute_force_break_reset_and_else():
@@ -69,7 +81,10 @@ def test_sets_and_counters():
     list(stats.tally([rec("a", "event"), rec("b", "event", "INFO")]))
     assert stats.error_ips == {"a"} and stats.by_level["WARNING"] == 0
     ops = blacklist_report(frozenset({"a", "z"}), stats.active_ips)
-    assert ops["intersection"] == {"a"} and ops["symmetric_difference"] == {"b", "z"}
+    assert ops["intersection"] == {"a"} and ops["symmetric_difference"] == {
+        "b",
+        "z",
+    }
 
 
 def test_rule_engine_and_audit():
@@ -78,5 +93,7 @@ def test_rule_engine_and_audit():
         blacklisted_ip, critical_level, record=r, blacklist=frozenset({"bad"})
     )
     assert set(hits) == {"blacklisted_ip", "critical_level"}
-    audit = audit_scope({"api_key": "s3cr3t", "counts": defaultdict(int), "__name__": "x"})
+    audit = audit_scope(
+        {"api_key": "s3cr3t", "counts": defaultdict(int), "__name__": "x"}
+    )
     assert audit["api_key"]["repr"] == "***" and "__name__" not in audit

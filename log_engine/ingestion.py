@@ -2,6 +2,7 @@
 
 import json
 import re
+import time
 from collections.abc import Iterator
 from datetime import datetime
 from functools import partial
@@ -10,7 +11,8 @@ from pathlib import Path
 # Line formats (see data/auth.log):
 #   2026-11-04T10:15:32Z ERROR 192.168.1.10 user=alice code=401 port=22/TCP \
 #       {"msg": "Failed password"}
-#   {"timestamp": "...", "level": "WARNING", "src_ip": "...", "user_id": "...", "code": 200}
+#   {"timestamp": "...", "level": "WARNING", "src_ip": "...",
+#    "user_id": "...", "code": 200}
 #   CONN 203.0.113.7 22 TCP
 #   kernel: eth0 link up
 EVENT_RE = re.compile(
@@ -27,10 +29,24 @@ Parsed = dict | tuple | str | None
 
 
 def read_lines(path: str | Path) -> Iterator[str]:
-    """Yield the lines of one file, one at a time, each at most MAX_LINE chars."""
+    """Yield the lines of one file, one at a time, at most MAX_LINE chars."""
     with open(path, encoding="utf-8", errors="replace") as f:
         for line in iter(partial(f.readline, MAX_LINE), ""):
             yield line.rstrip("\n")
+
+
+def follow_lines(path: str | Path, poll: float = 0.2) -> Iterator[str]:
+    """Like read_lines, but wait at the end of the file for new lines."""
+    with open(path, encoding="utf-8", errors="replace") as f:
+        buf = ""
+        while True:
+            buf += f.readline(MAX_LINE - len(buf))
+            # a line still being written has no "\n" yet: wait for the rest
+            if buf.endswith("\n") or len(buf) >= MAX_LINE:
+                yield buf.rstrip("\n")
+                buf = ""
+            else:
+                time.sleep(poll)
 
 
 def read_sources(*paths: str | Path) -> Iterator[str]:
@@ -41,7 +57,9 @@ def read_sources(*paths: str | Path) -> Iterator[str]:
 
 def load_blacklist(path: str | Path) -> frozenset[str]:
     """Read one IP per line; '#' starts a comment."""
-    return frozenset(ip for line in read_lines(path) if (ip := line.split("#")[0].strip()))
+    return frozenset(
+        ip for line in read_lines(path) if (ip := line.split("#")[0].strip())
+    )
 
 
 def parse_timestamp(text: str) -> datetime | None:
@@ -56,14 +74,20 @@ def parse_payload(text: str | None) -> dict | str | None:
         return None
     try:
         return json.loads(text)
-    # ValueError covers bad JSON and numbers over 4300 digits; deep nesting overflows the parser
+    # ValueError: bad JSON or numbers over 4300 digits;
+    # RecursionError: deep nesting overflows the parser
     except (ValueError, RecursionError):
         return text
 
 
 def is_port(text: str) -> bool:
     """ASCII digits only (no "²²"), at most 5, within 0-65535."""
-    return text.isascii() and text.isdigit() and len(text) <= 5 and int(text) <= 65535
+    return (
+        text.isascii()
+        and text.isdigit()
+        and len(text) <= 5
+        and int(text) <= 65535
+    )
 
 
 def parse_line(line: str) -> Parsed:

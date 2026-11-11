@@ -30,7 +30,11 @@ def blacklisted_ip(
 
 @security_rule
 def critical_level(record: dict, **_: object) -> str | None:
-    return f"critical event: {record['line']}" if record["level"] == "CRITICAL" else None
+    return (
+        f"critical event: {record['line']}"
+        if record["level"] == "CRITICAL"
+        else None
+    )
 
 
 @security_rule
@@ -68,14 +72,21 @@ def check_rules(
     findings: defaultdict[str, list[str]],
     hits: defaultdict[str, int],
     max_samples: int = 20,
+    on_hit: Callable[[str, str], None] | None = None,
     **config: object,
 ) -> Iterator[dict]:
-    """Apply the rules to each record, count hits, keep a few samples, pass it on."""
+    """Apply the rules to each record, count hits, keep a few samples."""
     rules = tuple(rules)
     for rec in records:
-        for name, msg in apply_security_rules(*rules, record=rec, **config).items():
+        for name, msg in apply_security_rules(
+            *rules, record=rec, **config
+        ).items():
             hits[name] += 1
-            if len(findings[name]) < max_samples:  # bounded: memory must not grow with hits
+            if on_hit:
+                on_hit(name, msg)
+            if (
+                len(findings[name]) < max_samples
+            ):  # bounded: memory must not grow with hits
                 findings[name].append(msg)
         yield rec
 
@@ -91,7 +102,7 @@ def _describe(value: object) -> dict:
 
 
 def audit_scope(scope: dict[str, object]) -> dict[str, dict]:
-    """Describe user variables of a scope; skip modules, dunders and mask secrets."""
+    """Describe a scope's variables; skip modules and dunders, mask secrets."""
     report = {}
     for name, value in scope.items():
         if name.startswith("__") or isinstance(value, ModuleType):

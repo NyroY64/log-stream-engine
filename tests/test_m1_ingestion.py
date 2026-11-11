@@ -31,7 +31,12 @@ def test_a_5000_digit_code_is_not_a_code():
 
 
 @pytest.mark.parametrize(
-    "line", ["CONN 1.1.1.1 ²² TCP", "CONN 1.1.1.1 65536 TCP", f"CONN 1.1.1.1 {'9' * 5000} TCP"]
+    "line",
+    [
+        "CONN 1.1.1.1 ²² TCP",
+        "CONN 1.1.1.1 65536 TCP",
+        f"CONN 1.1.1.1 {'9' * 5000} TCP",
+    ],
 )
 def test_bad_ports_are_not_connections(line):
     assert not isinstance(parse_line(line), tuple)
@@ -56,7 +61,10 @@ def test_a_hostile_file_runs_to_the_end(tmp_path):
 
 def test_a_5000_digit_json_number_is_rejected_not_a_crash():
     assert parse_line('{"level": "INFO", "code": ' + "9" * 5000 + "}") is None
-    assert parse_line(f"{TS} INFO 10.0.0.9 [{'9' * 5000}]")["payload"] == f"[{'9' * 5000}]"
+    assert (
+        parse_line(f"{TS} INFO 10.0.0.9 [{'9' * 5000}]")["payload"]
+        == f"[{'9' * 5000}]"
+    )
 
 
 def test_an_unwritable_audit_path_is_a_clean_error(tmp_path, capsys):

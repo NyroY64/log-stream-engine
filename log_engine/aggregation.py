@@ -1,4 +1,4 @@
-"""Module 3: sets, counters and brute-force detection over the record stream."""
+"""Module 3: sets, counters and brute-force detection over the stream."""
 
 from collections import defaultdict
 from collections.abc import Iterable, Iterator
@@ -10,9 +10,15 @@ class Stats:
     """Aggregates grow with distinct IPs and users, never with line count."""
 
     accepted: int = 0
-    by_level: defaultdict[str, int] = field(default_factory=lambda: defaultdict(int))
-    by_kind: defaultdict[str, int] = field(default_factory=lambda: defaultdict(int))
-    by_user: defaultdict[str, int] = field(default_factory=lambda: defaultdict(int))
+    by_level: defaultdict[str, int] = field(
+        default_factory=lambda: defaultdict(int)
+    )
+    by_kind: defaultdict[str, int] = field(
+        default_factory=lambda: defaultdict(int)
+    )
+    by_user: defaultdict[str, int] = field(
+        default_factory=lambda: defaultdict(int)
+    )
     active_ips: set[str] = field(default_factory=set)
     error_ips: set[str] = field(default_factory=set)
 
@@ -53,7 +59,9 @@ def blacklist_report(
 
 
 def detect_brute_force(
-    records: Iterable[dict], threshold: int = 5, cycles: list[bool] | None = None
+    records: Iterable[dict],
+    threshold: int = 5,
+    cycles: list[bool] | None = None,
 ) -> Iterator[tuple[str, int]]:
     """Yield (ip, failures) when an IP fails `threshold` logins in a row.
 
@@ -64,7 +72,10 @@ def detect_brute_force(
     fails: defaultdict[str, int] = defaultdict(int)
     while True:
         for rec in stream:
-            if rec["kind"] not in ("auth_failure", "auth_success") or not rec["src_ip"]:
+            if (
+                rec["kind"] not in ("auth_failure", "auth_success")
+                or not rec["src_ip"]
+            ):
                 continue
             ip = rec["src_ip"]
             if rec["kind"] == "auth_success":
@@ -75,7 +86,9 @@ def detect_brute_force(
                 break
         else:
             if cycles is not None:
-                cycles.append(True)  # stream ended without a pending alert: cycle validated
+                cycles.append(
+                    True
+                )  # stream ended without a pending alert: cycle validated
             return
         if cycles is not None:
             cycles.append(False)

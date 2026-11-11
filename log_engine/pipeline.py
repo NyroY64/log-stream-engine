@@ -1,4 +1,4 @@
-"""Module 2: lazy transformation chain built from filter, map and match-case."""
+"""Module 2: lazy transformation chain of filter, map and match-case."""
 
 import ipaddress
 from collections.abc import Iterable, Iterator
@@ -21,8 +21,9 @@ DEFAULTS: dict = {
 
 
 def route(item: Parsed) -> dict | None:
-    """Turn every parsed shape into one record dict; match-case picks the route."""
-    # cast: mypy does not narrow mapping patterns, the case already proved rec is a dict
+    """Turn every parsed shape into one record dict via match-case."""
+    # cast: mypy does not narrow mapping patterns,
+    # the case already proved rec is a dict
     match item:
         case str() as raw:
             return {**DEFAULTS, "payload": raw, "kind": "raw"}
@@ -45,14 +46,18 @@ def route(item: Parsed) -> dict | None:
 
 
 def printable(text: str) -> str:
-    """Escape control characters (e.g. ESC as \\x1b) so log text cannot drive the terminal."""
+    """Escape control characters (ESC as \\x1b) so logs cannot drive a tty."""
     return text if text.isprintable() else repr(text)[1:-1]
 
 
 def normalise(record: dict) -> dict:
     """Clean strings, fix case, and add a display line."""
     level = str(record["level"]).strip().upper()
-    user = printable(record["user_id"].strip().lower()) if record["user_id"] else None
+    user = (
+        printable(record["user_id"].strip().lower())
+        if record["user_id"]
+        else None
+    )
     ip = record["src_ip"].strip() if record["src_ip"] else None
     ts = record["timestamp"]
     if isinstance(ts, str):
@@ -65,7 +70,9 @@ def normalise(record: dict) -> dict:
         "level": level,
         "user_id": user,
         "src_ip": ip,
-        "line": printable(f"[{when}] {level:<8} {ip_text:<15} {user or '-'} {code}".rstrip()),
+        "line": printable(
+            f"[{when}] {level:<8} {ip_text:<15} {user or '-'} {code}".rstrip()
+        ),
     }
 
 
@@ -81,7 +88,10 @@ def is_ip(text: str) -> bool:
 def safe_normalise(record: dict) -> dict | None:
     try:
         return normalise(record)
-    except (ValueError, AttributeError):  # bad timestamp string or non-str field
+    except (
+        ValueError,
+        AttributeError,
+    ):  # bad timestamp string or non-str field
         return None
 
 
@@ -91,6 +101,7 @@ def build_pipeline(lines: Iterable[str]) -> Iterator[dict]:
     records = filter(None, map(route, map(parse_line, non_empty)))
     cleaned = filter(None, map(safe_normalise, records))
     return filter(
-        lambda r: r["level"] in LEVELS and (r["src_ip"] is None or is_ip(r["src_ip"])),
+        lambda r: r["level"] in LEVELS
+        and (r["src_ip"] is None or is_ip(r["src_ip"])),
         cleaned,
     )

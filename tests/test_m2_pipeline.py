@@ -4,12 +4,17 @@ from log_engine.ingestion import parse_line
 from log_engine.pipeline import is_ip, normalise, route
 from main import main
 
-ESC_LINE = "2026-11-04T10:15:32Z CRITICAL 10.0.0.1 user=root\x1b]0;hacked\x07 code=401"
+ESC_LINE = (
+    "2026-11-04T10:15:32Z CRITICAL 10.0.0.1 user=root\x1b]0;hacked\x07"
+    " code=401"
+)
 
 
 def test_blank_lines_are_counted_apart_from_rejects(tmp_path, capsys):
     log = tmp_path / "blank.log"
-    log.write_text("\n   \n###corrupted###\n2026-11-04T10:15:32Z INFO 10.0.0.9\n")
+    log.write_text(
+        "\n   \n###corrupted###\n2026-11-04T10:15:32Z INFO 10.0.0.9\n"
+    )
     assert main([str(log), "--audit", str(tmp_path / "audit.json")]) == 0
     assert "read 4, accepted 1, rejected 1, blank 2" in capsys.readouterr().out
 

@@ -32,9 +32,11 @@ class Stats:
 
 
 def count_items(items: Iterable[str], counter: list[int]) -> Iterator[str]:
-    """Count items in counter[0] as they pass."""
+    """Count items in counter[0] and blank ones in counter[1] as they pass."""
     for item in items:
         counter[0] += 1
+        if not item.strip():
+            counter[1] += 1
         yield item
 
 

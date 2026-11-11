@@ -45,7 +45,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         blacklist = load_blacklist(args.blacklist) if args.blacklist.exists() else frozenset()
         lines = simulate(args.simulate) if args.simulate is not None else read_sources(*args.logs)
-        read = [0]
+        read = [0, 0]  # lines read, blank lines
         stats = Stats()
         findings: defaultdict[str, list[str]] = defaultdict(list)
         hits: defaultdict[str, int] = defaultdict(int)
@@ -68,8 +68,10 @@ def main(argv: list[str] | None = None) -> int:
         f"{lvl} {stats.by_level[lvl]}" for lvl in ("INFO", "WARNING", "ERROR", "CRITICAL")
     )
     top_users = sorted(stats.by_user.items(), key=lambda kv: kv[1], reverse=True)[:5]
+    rejected = read[0] - read[1] - stats.accepted
     print(
-        f"[INGEST] read {read[0]}, accepted {stats.accepted}, rejected {read[0] - stats.accepted}"
+        f"[INGEST] read {read[0]}, accepted {stats.accepted}, "
+        f"rejected {rejected}, blank {read[1]}"
     )
     print(f"[LEVELS] {levels}")
     print(f"[KINDS]  {dict(stats.by_kind)}")

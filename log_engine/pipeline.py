@@ -3,6 +3,7 @@
 import ipaddress
 from collections.abc import Iterable, Iterator
 from datetime import datetime
+from functools import lru_cache
 from typing import cast
 
 from log_engine.ingestion import Parsed, parse_line
@@ -43,10 +44,15 @@ def route(item: Parsed) -> dict | None:
             return None
 
 
+def printable(text: str) -> str:
+    """Escape control characters (e.g. ESC as \\x1b) so log text cannot drive the terminal."""
+    return text if text.isprintable() else repr(text)[1:-1]
+
+
 def normalise(record: dict) -> dict:
     """Clean strings, fix case, and add a display line."""
     level = str(record["level"]).strip().upper()
-    user = record["user_id"].strip().lower() if record["user_id"] else None
+    user = printable(record["user_id"].strip().lower()) if record["user_id"] else None
     ip = record["src_ip"].strip() if record["src_ip"] else None
     ts = record["timestamp"]
     if isinstance(ts, str):
@@ -59,10 +65,11 @@ def normalise(record: dict) -> dict:
         "level": level,
         "user_id": user,
         "src_ip": ip,
-        "line": f"[{when}] {level:<8} {ip_text:<15} {user or '-'} {code}".rstrip(),
+        "line": printable(f"[{when}] {level:<8} {ip_text:<15} {user or '-'} {code}".rstrip()),
     }
 
 
+@lru_cache(maxsize=65536)  # the same IPs repeat on most lines
 def is_ip(text: str) -> bool:
     try:
         ipaddress.ip_address(text)

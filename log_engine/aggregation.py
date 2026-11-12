@@ -85,10 +85,9 @@ def detect_brute_force(
             if fails[ip] >= threshold:
                 break
         else:
+            # stream ended without a pending alert: cycle validated
             if cycles is not None:
-                cycles.append(
-                    True
-                )  # stream ended without a pending alert: cycle validated
+                cycles.append(True)
             return
         if cycles is not None:
             cycles.append(False)

@@ -1,12 +1,36 @@
-"""Acceptance tests for issue #1 (Module 1: ingestion)."""
+"""Module 1: lazy reading and parsing of log lines."""
+
+import types
 
 import pytest
 
-from log_engine.ingestion import parse_line, read_lines
+from log_engine.ingestion import parse_line, read_lines, read_sources
 from main import main
 
 MIB = 1 << 20
 TS = "2026-11-04T10:15:32Z"
+EVENT = (
+    "2026-11-04T10:15:32Z error 192.168.1.10 user=Alice code=401 port=22/TCP"
+    ' {"msg": "Failed password"}'
+)
+
+
+def test_read_sources_is_lazy_and_chains_files(tmp_path):
+    a, b = tmp_path / "a.log", tmp_path / "b.log"
+    a.write_text("a1\na2\n")
+    b.write_text("b1\n")
+    gen = read_sources(a, b)
+    assert isinstance(gen, types.GeneratorType)
+    assert list(gen) == ["a1", "a2", "b1"]
+
+
+def test_parse_line_shapes():
+    assert parse_line(EVENT)["meta"] == ("192.168.1.10", 22, "TCP")
+    assert parse_line(EVENT)["payload"] == {"msg": "Failed password"}
+    assert parse_line("CONN 203.0.113.7 22 tcp") == ("203.0.113.7", 22, "TCP")
+    assert parse_line("kernel: eth0 link up") == "kernel: eth0 link up"
+    assert parse_line("###corrupted###") is None
+    assert parse_line("{not json") is None
 
 
 def test_a_line_never_exceeds_one_mib(tmp_path):

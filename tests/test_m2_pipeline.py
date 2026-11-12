@@ -1,11 +1,15 @@
-"""Acceptance tests for issue #2 (Module 2: pipeline)."""
+"""Module 2: filter/map pipeline, match-case routing and normalising."""
 
 import json
 
 from log_engine.ingestion import parse_line
-from log_engine.pipeline import is_ip, normalise, route
+from log_engine.pipeline import build_pipeline, is_ip, normalise, route
 from main import main
 
+EVENT = (
+    "2026-11-04T10:15:32Z error 192.168.1.10 user=Alice code=401 port=22/TCP"
+    ' {"msg": "Failed password"}'
+)
 ESC_LINE = (
     "2026-11-04T10:15:32Z CRITICAL 10.0.0.1 user=root\x1b]0;hacked\x07"
     " code=401"
@@ -58,3 +62,19 @@ def test_json_meta_becomes_a_safe_tuple(tmp_path, capsys):
     assert main([str(log), "--live", "--audit", str(tmp_path / "a.json")]) == 0
     out = capsys.readouterr().out
     assert "suspicious_port" in out and "\x1b" not in out and "\x07" not in out
+
+
+def test_route_and_pipeline_normalise_and_reject():
+    assert route(parse_line(EVENT))["kind"] == "auth_failure"
+    assert route(("1.2.3.4", 80, "TCP"))["kind"] == "connection"
+    lines = [
+        EVENT,
+        "",
+        "###corrupted###",
+        "2026-11-04T10:15:32Z LOUD 1.2.3.4",
+        "2026-11-04T10:15:32Z INFO 999.1.1.1",
+        json.dumps({"level": " warning "}),
+    ]
+    out = list(build_pipeline(lines))
+    assert [r["level"] for r in out] == ["ERROR", "WARNING"]
+    assert out[0]["user_id"] == "alice"

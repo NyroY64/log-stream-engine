@@ -84,9 +84,8 @@ def check_rules(
             hits[name] += 1
             if on_hit:
                 on_hit(name, msg)
-            if (
-                len(findings[name]) < max_samples
-            ):  # bounded: memory must not grow with hits
+            # bounded: memory must not grow with the number of hits
+            if len(findings[name]) < max_samples:
                 findings[name].append(msg)
         yield rec
 

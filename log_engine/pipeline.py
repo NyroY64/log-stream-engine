@@ -22,7 +22,7 @@ DEFAULTS: dict = {
 
 def route(item: Parsed) -> dict | None:
     """Turn every parsed shape into one record dict via match-case."""
-    # cast: mypy does not narrow mapping patterns,
+    # cast: type checkers do not narrow mapping patterns,
     # the case already proved rec is a dict
     match item:
         case str() as raw:
@@ -96,11 +96,8 @@ def is_ip(text: str) -> bool:
 def safe_normalise(record: dict) -> dict | None:
     try:
         return normalise(record)
-    except (
-        ValueError,
-        AttributeError,
-    ):  # bad timestamp string or non-str field
-        return None
+    except (ValueError, AttributeError):
+        return None  # bad timestamp string or non-str field
 
 
 def build_pipeline(lines: Iterable[str]) -> Iterator[dict]:

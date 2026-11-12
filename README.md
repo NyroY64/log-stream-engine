@@ -1,8 +1,8 @@
 # Log stream engine
 
 Command-line engine that streams large log files, parses each line, detects attacks
-and writes an audit report. No stage ever loads a whole file into memory
-(peak about 200 KiB for 1 000 000 lines).
+and writes an audit report. No stage ever loads a whole file into memory:
+a 1 GiB log file (14.6 million lines) runs with a peak of about 20 MiB.
 
 ## Setup
 
@@ -46,13 +46,14 @@ Options: `--threshold N` (failed logins in a row that raise a brute-force alert,
 
 | Path | Module | Content |
 |---|---|---|
-| `log_engine/ingestion.py` | M1 | `read_lines` (`yield`), `read_sources` (`yield from`), `parse_line` to dict, tuple or str |
+| `log_engine/ingestion.py` | M1 | `read_lines` (`yield`), `read_sources` (`yield from`), `follow_lines` (live file), `parse_line` to dict, tuple or str |
 | `log_engine/pipeline.py` | M2 | `filter(None)`, `map`, `match-case` routing, `normalise`, `filter(lambda)` |
 | `log_engine/aggregation.py` | M3 | `set`/`frozenset` operations, `defaultdict` counters, brute-force detector (`while`, `for`, `break`, `continue`, `for ... else`) |
 | `log_engine/rules.py` | M4 | `apply_security_rules(*args, **kwargs)`, rule registry, `globals()`/`locals()` audit |
 | `log_engine/simulator.py` | test data | simulated log stream in every format |
 | `main.py` | entry point | wires the stages into one lazy pass, prints the summary |
-| `notebooks/report.ipynb` | report | charts of the results and memory use |
+| `notebooks/report.ipynb` | report | charts of the results and memory use, 1 GiB memory test |
+| `tests/` | tests | one file per module (`test_m1_ingestion.py` to `test_m4_rules.py`) and `test_live.py` |
 
 ## Log formats
 

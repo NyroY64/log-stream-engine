@@ -22,7 +22,7 @@ FAILED = '{"msg": "Failed password"}'
 def simulate(
     n: int, seed: int = 42, attack_every: int = 2000
 ) -> Iterator[str]:
-    """Yield n log lines; every attack_every lines, 7 attacker failures."""
+    """Yield n log lines; an attacker fails 7 logins every attack_every."""
     rng = random.Random(seed)
     ts = datetime(2026, 11, 4, 8, 0, tzinfo=timezone.utc)
     for i in range(n):
